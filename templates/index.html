@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block head %}
+{{ super() }}
+{% endblock %}
+
+{% block page_content %}
+<table class="table table-bordered">
+    <thead>
+        <tr>
+            <th>Haram</th>
+            <th>Priority</th>
+            <th>Vote</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for haram in harams %}
+            <tr>
+                <td>{{ haram.text }}</td>
+                <td>{{ haram.priority }}</td>
+                <td>
+                    <a class="btn btn-default" href="/upvote/{{ haram.key.id() }}" role="button">Up</a>
+                    <a class="btn btn-default" href="/downvote/{{ haram.key.id() }}" role="button">Down</a>
+                    <a class="btn btn-default" href="/delete/{{ haram.key.id() }}" role="button">Delete</a>
+                </td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
