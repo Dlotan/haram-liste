@@ -6,6 +6,11 @@
 {% endblock %}
 
 {% block page_content %}
-    <a class="btn btn-default" href="/deletereally/{{ haram_id }}" role="button">Delete</a>
-    <a class="btn btn-default" href="/" role="button">Cancel</a>
+    <div class="jumbotron">
+        <div class="container">
+            <h3>Confirm Deletion</h3><br>
+            <a class="btn btn-default" href="/deletereally/{{ haram_id }}" role="button">Delete</a>
+            <a class="btn btn-default" href="/" role="button">Cancel</a>
+        </div>
+    </div>
 {% endblock %}

@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect
+from flask import Flask, render_template, redirect, flash
 from flask_bootstrap import Bootstrap
 from google.appengine.ext import ndb
 from flask.ext.wtf import Form
@@ -9,12 +9,63 @@ import time
 
 class NewForm(Form):
     text = StringField('Text', validators=[DataRequired()])
-    priority = IntegerField('Priority')
+    position = IntegerField('Position')
     submit = SubmitField('Submit')
 
 class HaramPosition(ndb.Model):
     text = ndb.TextProperty()
-    priority = ndb.IntegerProperty()
+    position = ndb.IntegerProperty()
+
+    @classmethod
+    def get_highest_position(cls):
+        harams = HaramPosition.query().order(-HaramPosition.position).fetch(1)
+        for haram in harams:
+            return haram.position
+
+    @classmethod
+    def new(cls, text, position):
+        harams = HaramPosition.query(HaramPosition.position >= position).order(HaramPosition.position).fetch(20000)
+        has_higher = False
+        for haram in harams:
+            has_higher = True
+            haram.position += 1
+            haram.put()
+        if not has_higher:
+            highest_position = HaramPosition.get_highest_position()
+            if highest_position:
+                position = highest_position + 1
+            if not highest_position:
+                position = 1
+        HaramPosition(text=text, position=position).put()
+
+    @classmethod
+    def upvote(cls, haram_id):
+        haram_position = HaramPosition.get_by_id(haram_id)
+        if haram_position.position == 1:
+            flash("Already on top")
+            return
+        harams = HaramPosition.query(HaramPosition.position
+                                     < haram_position.position).order(HaramPosition.position).fetch(20000)
+        for haram in harams:
+            haram.position += 1
+            haram.put()
+        haram_position.position -= 1
+        haram_position.put()
+
+    @classmethod
+    def downvote(cls, haram_id):
+        haram_position = HaramPosition.get_by_id(haram_id)
+        if haram_position.position == HaramPosition.get_highest_position():
+            flash("Already on bottom")
+            return
+        harams = HaramPosition.query(HaramPosition.position
+                                     > haram_position.position).order(HaramPosition.position).fetch(20000)
+        for haram in harams:
+            haram.position -= 1
+            haram.put()
+        haram_position.position += 1
+        haram_position.put()
+
 
 app = Flask(__name__)
 app.secret_key = 'asd123'
@@ -22,7 +73,7 @@ Bootstrap(app)
 
 @app.route('/')
 def index():
-    harams = HaramPosition.query().order(-HaramPosition.priority).fetch(1000)
+    harams = HaramPosition.query().order(HaramPosition.position).fetch(20000)
     return render_template('index.html', harams=harams)
 
 @app.route('/new', methods=('GET', 'POST'))
@@ -30,28 +81,24 @@ def new():
     form = NewForm()
     if form.validate_on_submit():
         text = form.text.data
-        priority = form.priority.data
-        haramposition = HaramPosition(text=text, priority=priority)
-        haramposition.put()
+        position = form.position.data
+        HaramPosition.new(text, position)
         time.sleep(1)
+        flash("Created")
         return redirect('/')
     return render_template('new.html', form=form)
 
 
 @app.route('/upvote/<haram_id>')
 def upvote(haram_id):
-    haram_position = HaramPosition.get_by_id(int(haram_id))
-    haram_position.priority += 1
-    haram_position.put()
+    HaramPosition.upvote(int(haram_id))
     time.sleep(1)
     return redirect('/')
 
 
 @app.route('/downvote/<haram_id>')
 def downvote(haram_id):
-    haram_position = HaramPosition.get_by_id(int(haram_id))
-    haram_position.priority -= 1
-    haram_position.put()
+    HaramPosition.downvote(int(haram_id))
     time.sleep(1)
     return redirect('/')
 
@@ -66,6 +113,7 @@ def deletereally(haram_id):
     haram_position = HaramPosition.get_by_id(int(haram_id))
     haram_position.key.delete()
     time.sleep(1)
+    flash("Deleted")
     return redirect('/')
 
 
