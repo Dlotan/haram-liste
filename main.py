@@ -45,7 +45,7 @@ class HaramPosition(ndb.Model):
             flash("Already on top")
             return
         harams = HaramPosition.query(HaramPosition.position
-                                     < haram_position.position).order(HaramPosition.position).fetch(20000)
+                                     < haram_position.position).order(-HaramPosition.position).fetch(1)
         for haram in harams:
             haram.position += 1
             haram.put()
@@ -59,12 +59,22 @@ class HaramPosition(ndb.Model):
             flash("Already on bottom")
             return
         harams = HaramPosition.query(HaramPosition.position
-                                     > haram_position.position).order(HaramPosition.position).fetch(20000)
+                                     > haram_position.position).order(HaramPosition.position).fetch(1)
         for haram in harams:
             haram.position -= 1
             haram.put()
         haram_position.position += 1
         haram_position.put()
+
+    @classmethod
+    def delete(cls, haram_id):
+        haram_position = HaramPosition.get_by_id(haram_id)
+        harams = HaramPosition.query(HaramPosition.position
+                                     > haram_position.position).order(HaramPosition.position).fetch(20000)
+        for haram in harams:
+            haram.position -= 1
+            haram.put()
+        haram_position.key.delete()
 
 
 app = Flask(__name__)
@@ -110,8 +120,7 @@ def delete(haram_id):
 
 @app.route('/deletereally/<haram_id>')
 def deletereally(haram_id):
-    haram_position = HaramPosition.get_by_id(int(haram_id))
-    haram_position.key.delete()
+    HaramPosition.delete(int(haram_id))
     time.sleep(1)
     flash("Deleted")
     return redirect('/')
