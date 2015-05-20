@@ -4,6 +4,7 @@ from google.appengine.ext import ndb
 from flask.ext.wtf import Form
 from wtforms import StringField, SubmitField, IntegerField
 from wtforms.validators import DataRequired
+import datetime
 import time
 
 
@@ -15,6 +16,14 @@ class NewForm(Form):
 class HaramPosition(ndb.Model):
     text = ndb.TextProperty()
     position = ndb.IntegerProperty()
+    created = ndb.DateTimeProperty(auto_now_add=True)
+
+    def is_newest(self):
+        newest_list = HaramPosition.query().order(-HaramPosition.created).fetch(1)
+        for newest in newest_list:
+            if newest.position == self.position:
+                return True
+        return False
 
     @classmethod
     def get_highest_position(cls):
@@ -129,6 +138,7 @@ def deletereally(haram_id):
 @app.route('/robots.txt')
 def robots():
     return render_template('robots.txt')
+
 
 if __name__ == '__main__':
     app.run()

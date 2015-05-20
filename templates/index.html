@@ -5,17 +5,17 @@
 {% endblock %}
 
 {% block page_content %}
-<table class="table table-bordered">
+<table class="table table-bordered table-hover">
     <thead>
         <tr>
-            <th>Position</th>
+            <th>#</th>
             <th>Haram</th>
             <th>Vote</th>
         </tr>
     </thead>
     <tbody>
         {% for haram in harams %}
-            <tr>
+            <tr {% if haram.is_newest() %} class="warning" {% endif %}>
                 <td><b>{{ haram.position }}</b></td>
                 <td>{{ haram.text }}</td>
                 <td>
