@@ -1,10 +1,10 @@
 from flask import Flask, render_template, redirect, flash
 from flask_bootstrap import Bootstrap
 from google.appengine.ext import ndb
+from google.appengine.api import mail
 from flask.ext.wtf import Form
 from wtforms import StringField, SubmitField, IntegerField
 from wtforms.validators import DataRequired
-import datetime
 import time
 
 
@@ -12,6 +12,7 @@ class NewForm(Form):
     text = StringField('Text', validators=[DataRequired()])
     position = IntegerField('Position')
     submit = SubmitField('Submit')
+
 
 class HaramPosition(ndb.Model):
     text = ndb.TextProperty()
@@ -90,10 +91,12 @@ app = Flask(__name__)
 app.secret_key = 'asd123'
 Bootstrap(app)
 
+
 @app.route('/')
 def index():
     harams = HaramPosition.query().order(HaramPosition.position).fetch(20000)
     return render_template('index.html', harams=harams)
+
 
 @app.route('/new', methods=('GET', 'POST'))
 def new():
@@ -102,8 +105,15 @@ def new():
         text = form.text.data
         position = form.position.data
         HaramPosition.new(text, position)
+        mail.send_mail(
+            sender='florian.groetzner@gmail.com',
+            to='florian.groetzner@gmail.com',
+            subject='New Haram: ' + text,
+            body='There is a new Haram:\n\n ' + text
+        )
         time.sleep(1)
         flash("Created")
+
         return redirect('/')
     return render_template('new.html', form=form)
 
@@ -129,6 +139,13 @@ def delete(haram_id):
 
 @app.route('/deletereally/<haram_id>')
 def deletereally(haram_id):
+    haram_position = HaramPosition.get_by_id(int(haram_id))
+    mail.send_mail(
+        sender='florian.groetzner@gmail.com',
+        to='florian.groetzner@gmail.com',
+        subject='Deleted Haram: ' + haram_position.text,
+        body='There is a deleted Haram:\n\n ' + haram_position.text
+    )
     HaramPosition.delete(int(haram_id))
     time.sleep(1)
     flash("Deleted")
