@@ -14,6 +14,12 @@ class NewForm(Form):
     submit = SubmitField('Submit')
 
 
+class EditForm(Form):
+    text = StringField('Text', validators=[DataRequired()])
+    position = IntegerField('Position')
+    submit = SubmitField('Submit')
+
+
 class HaramPosition(ndb.Model):
     text = ndb.TextProperty()
     position = ndb.IntegerProperty()
@@ -33,7 +39,7 @@ class HaramPosition(ndb.Model):
             return haram.position
 
     @classmethod
-    def new(cls, text, position):
+    def new(cls, text, position, created=None):
         harams = HaramPosition.query(HaramPosition.position >= position).order(HaramPosition.position).fetch(20000)
         has_higher = False
         for haram in harams:
@@ -46,7 +52,9 @@ class HaramPosition(ndb.Model):
                 position = highest_position + 1
             if not highest_position:
                 position = 1
-        HaramPosition(text=text, position=position).put()
+        if created:
+            return HaramPosition(text=text, position=position, created=created).put()
+        return HaramPosition(text=text, position=position).put()
 
     @classmethod
     def upvote(cls, haram_id):
@@ -85,6 +93,13 @@ class HaramPosition(ndb.Model):
             haram.position -= 1
             haram.put()
         haram_position.key.delete()
+
+    @classmethod
+    def edit(cls, haram_id, text, position):
+        haram_position = HaramPosition.get_by_id(haram_id)
+        created = haram_position.created
+        HaramPosition.delete(haram_id)
+        return HaramPosition.new(text=text, position=position, created=created)
 
 
 app = Flask(__name__)
@@ -132,13 +147,20 @@ def downvote(haram_id):
     return redirect('/')
 
 
+@app.route('/edit/<haram_id>', methods=('GET', 'POST'))
+def edit(haram_id):
+    haram_position = HaramPosition.get_by_id(int(haram_id))
+    edit_form = EditForm(text=haram_position.text, position=haram_position.position)
+    if edit_form.validate_on_submit():
+        HaramPosition.edit(int(haram_id), edit_form.text.data, edit_form.position.data)
+        time.sleep(1)
+        flash('Updated')
+        return redirect('/')
+    return render_template('edit.html', edit_form=edit_form, haram_id=haram_id)
+
+
 @app.route('/delete/<haram_id>')
 def delete(haram_id):
-    return render_template('delete.html', haram_id=haram_id)
-
-
-@app.route('/deletereally/<haram_id>')
-def deletereally(haram_id):
     haram_position = HaramPosition.get_by_id(int(haram_id))
     mail.send_mail(
         sender='florian.groetzner@gmail.com',
