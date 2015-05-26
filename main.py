@@ -39,7 +39,7 @@ class HaramPosition(ndb.Model):
             return haram.position
 
     @classmethod
-    def new(cls, text, position, created=None):
+    def new(cls, text, position):
         harams = HaramPosition.query(HaramPosition.position >= position).order(HaramPosition.position).fetch(20000)
         has_higher = False
         for haram in harams:
@@ -52,8 +52,6 @@ class HaramPosition(ndb.Model):
                 position = highest_position + 1
             if not highest_position:
                 position = 1
-        if created:
-            return HaramPosition(text=text, position=position, created=created).put()
         return HaramPosition(text=text, position=position).put()
 
     @classmethod
@@ -96,10 +94,9 @@ class HaramPosition(ndb.Model):
 
     @classmethod
     def edit(cls, haram_id, text, position):
-        haram_position = HaramPosition.get_by_id(haram_id)
-        created = haram_position.created
         HaramPosition.delete(haram_id)
-        return HaramPosition.new(text=text, position=position, created=created)
+        time.sleep(0.5)
+        return HaramPosition.new(text=text, position=position)
 
 
 app = Flask(__name__)
